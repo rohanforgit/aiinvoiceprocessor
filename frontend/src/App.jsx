@@ -7,7 +7,7 @@ import InvoiceTable from './components/InvoiceTable';
 import InvoiceReviewModal from './components/InvoiceReviewModal';
 import AnalyticsView from './components/AnalyticsView';
 import SettingsModal from './components/SettingsModal';
-import AuthModal from './components/AuthModal';
+import ShaderLoginPage from './components/ShaderLoginPage';
 import Hero from './components/ui/animated-shader-hero';
 import { supabase } from './supabaseClient';
 
@@ -280,10 +280,10 @@ export default function App() {
         />
       )}
 
-      {/* Google & Email Auth Modal */}
+      {/* Fullscreen Animated Shader Login Screen */}
       {showAuthModal && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 999 }}>
-          <AuthModal 
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
+          <ShaderLoginPage 
             onLogin={(u) => { handleLogin(u); setShowAuthModal(false); }} 
             onGuestContinue={() => { handleGuestContinue(); setShowAuthModal(false); }} 
           />
