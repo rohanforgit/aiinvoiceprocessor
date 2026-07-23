@@ -460,55 +460,68 @@ const Hero: React.FC<HeroProps> = ({
       
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 w-full h-full object-contain touch-none"
-        style={{ background: 'black' }}
+        className="absolute inset-0 w-full h-full object-cover touch-none"
+        style={{ background: '#000000' }}
       />
       
       {/* Hero Content Overlay */}
-      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-white">
+      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center text-white px-4">
         {/* Trust Badge */}
         {trustBadge && (
-          <div className="mb-8 animate-fade-in-down">
-            <div className="flex items-center gap-2 px-6 py-3 bg-orange-500/10 backdrop-blur-md border border-orange-300/30 rounded-full text-sm">
+          <div className="mb-6 animate-fade-in-down flex justify-center">
+            <div className="flex items-center justify-center gap-2 px-5 py-2.5 bg-zinc-900/80 backdrop-blur-md border border-zinc-700/50 rounded-full text-xs font-semibold tracking-wide">
               {trustBadge.icons && (
-                <div className="flex">
+                <div className="flex items-center gap-1">
                   {trustBadge.icons.map((icon, index) => (
-                    <span key={index} className={`text-${index === 0 ? 'yellow' : index === 1 ? 'orange' : 'amber'}-300`}>
+                    <span key={index} style={{ color: '#fb923c' }}>
                       {icon}
                     </span>
                   ))}
                 </div>
               )}
-              <span className="text-orange-100">{trustBadge.text}</span>
+              <span className="text-zinc-300">{trustBadge.text}</span>
             </div>
           </div>
         )}
 
-        <div className="text-center space-y-6 max-w-5xl mx-auto px-4">
+        <div className="space-y-6 max-w-4xl mx-auto">
           {/* Main Heading with Animation */}
-          <div className="space-y-2">
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-r from-orange-300 via-yellow-400 to-amber-300 bg-clip-text text-transparent animate-fade-in-up animation-delay-200">
+          <div className="space-y-3 flex flex-col items-center justify-center">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight bg-gradient-to-r from-zinc-100 via-zinc-200 to-zinc-400 bg-clip-text text-transparent animate-fade-in-up animation-delay-200 w-full text-center">
               {headline.line1}
             </h1>
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-r from-yellow-300 via-orange-400 to-red-400 bg-clip-text text-transparent animate-fade-in-up animation-delay-400">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500 bg-clip-text text-transparent animate-fade-in-up animation-delay-400 w-full text-center">
               {headline.line2}
             </h1>
           </div>
           
           {/* Subtitle with Animation */}
-          <div className="max-w-3xl mx-auto animate-fade-in-up animation-delay-600">
-            <p className="text-lg md:text-xl lg:text-2xl text-orange-100/90 font-light leading-relaxed">
+          <div className="max-w-2xl mx-auto animate-fade-in-up animation-delay-600">
+            <p className="text-base md:text-lg lg:text-xl text-zinc-400 font-normal leading-relaxed text-center">
               {subtitle}
             </p>
           </div>
           
           {/* CTA Buttons with Animation */}
           {buttons && (
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10 animate-fade-in-up animation-delay-800">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-8 animate-fade-in-up animation-delay-800">
               {buttons.primary && (
                 <button 
                   onClick={buttons.primary.onClick}
-                  className="px-8 py-4 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-black rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-orange-500/25 cursor-pointer"
+                  style={{
+                    background: '#6366f1',
+                    color: '#ffffff',
+                    padding: '12px 28px',
+                    borderRadius: '10px',
+                    fontWeight: '700',
+                    fontSize: '0.92rem',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = '#4f46e5'}
+                  onMouseOut={(e) => e.currentTarget.style.background = '#6366f1'}
                 >
                   {buttons.primary.text}
                 </button>
@@ -516,7 +529,20 @@ const Hero: React.FC<HeroProps> = ({
               {buttons.secondary && (
                 <button 
                   onClick={buttons.secondary.onClick}
-                  className="px-8 py-4 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-300/30 hover:border-orange-300/50 text-orange-100 rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105 backdrop-blur-sm cursor-pointer"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.06)',
+                    color: '#f4f4f5',
+                    padding: '12px 28px',
+                    borderRadius: '10px',
+                    fontWeight: '600',
+                    fontSize: '0.92rem',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    backdropFilter: 'blur(8px)'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'}
                 >
                   {buttons.secondary.text}
                 </button>
