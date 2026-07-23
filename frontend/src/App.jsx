@@ -22,7 +22,7 @@ export default function App() {
     }
   });
 
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'invoices' | 'upload' | 'analytics'
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [viewMode, setViewMode] = useState('landing'); // 'landing' | 'app'
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -30,7 +30,7 @@ export default function App() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [webhookUrl, setWebhookUrl] = useState('https://rojosh.app.n8n.cloud/webhook/invoice-upload');
 
-  // Auth State
+  // Auth State - Starts as null/false if no session exists in localStorage
   const [user, setUser] = useState(() => {
     try {
       const savedUser = localStorage.getItem('msme_user_auth');
@@ -57,7 +57,7 @@ export default function App() {
     }
   }, [invoices]);
 
-  // Listen for live Supabase Google OAuth callback
+  // Listen for live Supabase Google OAuth callback redirect
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -102,15 +102,6 @@ export default function App() {
     saveAuthSession(userData);
   };
 
-  const handleGuestContinue = () => {
-    saveAuthSession({
-      name: 'MSME Manager',
-      email: 'owner@business.com',
-      provider: 'Guest',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80'
-    });
-  };
-
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -119,7 +110,6 @@ export default function App() {
     setIsAuthenticated(false);
     localStorage.removeItem('msme_user_auth');
     setViewMode('landing');
-    setShowAuthModal(true);
   };
 
   // Save newly extracted invoice to state & localStorage
@@ -153,33 +143,27 @@ export default function App() {
 
   const pendingCount = invoices.filter(i => i.status === 'pending').length;
 
-  // 1. RENDER STANDALONE LANDING HOME PAGE
+  // 1. RENDER STANDALONE LANDING HOME PAGE (Direct access on load, no gate!)
   if (viewMode === 'landing' && !showAuthModal) {
     return (
       <LandingHomePage 
         onOpenLogin={() => setShowAuthModal(true)}
         onLaunchDashboard={() => {
-          if (!user) {
-            setUser({
-              name: 'Rojo (MSME Owner)',
-              email: 'rojo.owner@business.com',
-              provider: 'Google (Gmail)',
-              avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80'
-            });
-            setIsAuthenticated(true);
+          if (isAuthenticated && user) {
+            setViewMode('app');
+          } else {
+            setShowAuthModal(true);
           }
-          setViewMode('app');
         }}
       />
     );
   }
 
-  // 2. RENDER FULLSCREEN ANIMATED SHADER LOGIN SCREEN
+  // 2. RENDER FULLSCREEN ANIMATED SHADER LOGIN SCREEN (Google Login only)
   if (showAuthModal) {
     return (
       <ShaderLoginPage 
         onLogin={(u) => { handleLogin(u); }} 
-        onGuestContinue={() => { handleGuestContinue(); }} 
       />
     );
   }
