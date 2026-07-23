@@ -143,24 +143,8 @@ export default function App() {
 
   const pendingCount = invoices.filter(i => i.status === 'pending').length;
 
-  // 1. RENDER STANDALONE LANDING HOME PAGE (Direct access on load, no gate!)
-  if (viewMode === 'landing' && !showAuthModal) {
-    return (
-      <LandingHomePage 
-        onOpenLogin={() => setShowAuthModal(true)}
-        onLaunchDashboard={() => {
-          if (isAuthenticated && user) {
-            setViewMode('app');
-          } else {
-            setShowAuthModal(true);
-          }
-        }}
-      />
-    );
-  }
-
-  // 2. RENDER FULLSCREEN ANIMATED SHADER LOGIN SCREEN (Google Login only)
-  if (showAuthModal) {
+  // 1. RENDER STANDALONE LOGIN GATE DIRECTLY ON LOAD
+  if (viewMode === 'landing' || showAuthModal) {
     return (
       <ShaderLoginPage 
         onLogin={(u) => { handleLogin(u); }} 

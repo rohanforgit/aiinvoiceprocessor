@@ -57,31 +57,38 @@ Line.prototype = {
     let e = this.spring,
       // @ts-ignore
       t = this.nodes[0];
+    
+    if (t) {
+      t.vx += (pos.x - t.x) * e;
+      t.vy += (pos.y - t.y) * e;
+    }
+    
     // @ts-ignore
-    t.vx += (pos.x - t.x) * e;
-    // @ts-ignore
-    t.vy += (pos.y - t.y) * e;
-    // @ts-ignore
-    for (var n, i = 0, a = this.nodes.length; i < a; i++)
+    for (var n, i = 0, a = this.nodes.length; i < a; i++) {
       // @ts-ignore
-      (t = this.nodes[i]),
+      t = this.nodes[i];
+      if (t) {
         0 < i &&
           // @ts-ignore
           ((n = this.nodes[i - 1]),
-          (t.vx += (n.x - t.x) * e),
-          (t.vy += (n.y - t.y) * e),
-          (t.vx += n.vx * E.dampening),
-          (t.vy += n.vy * E.dampening)),
+          n && (
+            (t.vx += (n.x - t.x) * e),
+            (t.vy += (n.y - t.y) * e),
+            (t.vx += n.vx * E.dampening),
+            (t.vy += n.vy * E.dampening)
+          ));
         // @ts-ignore
-        (t.vx *= this.friction),
+        t.vx *= this.friction;
         // @ts-ignore
-        (t.vy *= this.friction),
-        (t.x += t.vx),
-        (t.y += t.vy),
-        (e *= E.tension);
+        t.vy *= this.friction;
+        t.x += t.vx;
+        t.y += t.vy;
+      }
+      e *= E.tension;
+    }
   },
   draw: function () {
-    if (!ctx) return;
+    if (!ctx || !this.nodes[0]) return;
     let e,
       t,
       // @ts-ignore
@@ -98,10 +105,11 @@ Line.prototype = {
       e = this.nodes[a];
       // @ts-ignore
       t = this.nodes[a + 1];
-      n = 0.5 * (e.x + t.x);
-      i = 0.5 * (e.y + t.y);
-      // @ts-ignore
-      ctx.quadraticCurveTo(e.x, e.y, n, i);
+      if (e && t) {
+        n = 0.5 * (e.x + t.x);
+        i = 0.5 * (e.y + t.y);
+        ctx.quadraticCurveTo(e.x, e.y, n, i);
+      }
     }
     // @ts-ignore
     e = this.nodes[a];
@@ -128,8 +136,8 @@ function onMousemove(e) {
   // @ts-ignore
   function c(e) {
     if (e.touches && e.touches.length > 0) {
-      pos.x = e.touches[0].pageX;
-      pos.y = e.touches[0].pageY;
+      pos.x = e.touches[0].clientX;
+      pos.y = e.touches[0].clientY;
     } else {
       pos.x = e.clientX;
       pos.y = e.clientY;
@@ -138,8 +146,8 @@ function onMousemove(e) {
   // @ts-ignore
   function l(e) {
     if (e.touches && e.touches.length === 1) {
-      pos.x = e.touches[0].pageX;
-      pos.y = e.touches[0].pageY;
+      pos.x = e.touches[0].clientX;
+      pos.y = e.touches[0].clientY;
     }
   }
   document.removeEventListener("mousemove", onMousemove);
@@ -152,9 +160,10 @@ function onMousemove(e) {
   render();
 }
 
-var animId: number | null = null;
+var animId: any = null;
 
 function render() {
+  // @ts-ignore
   if (ctx && ctx.running) {
     // @ts-ignore
     ctx.globalCompositeOperation = "source-over";
@@ -168,9 +177,10 @@ function render() {
     ctx.lineWidth = 10;
     for (var e, t = 0; t < E.trails; t++) {
       // @ts-ignore
-      if (lines[t]) {
-        lines[t].update();
-        lines[t].draw();
+      e = lines[t];
+      if (e) {
+        e.update();
+        e.draw();
       }
     }
     // @ts-ignore
@@ -187,10 +197,12 @@ function resizeCanvas() {
 }
 
 // @ts-ignore
-var ctx: any = null,
-  f: any = null,
-  pos: any = { x: 0, y: 0 },
-  lines: any[] = [],
+var ctx,
+  // @ts-ignore
+  f,
+  pos = { x: 0, y: 0 },
+  // @ts-ignore
+  lines = [],
   E = {
     debug: true,
     friction: 0.5,
@@ -199,7 +211,6 @@ var ctx: any = null,
     dampening: 0.025,
     tension: 0.99,
   };
-
 function Node() {
   this.x = 0;
   this.y = 0;
@@ -216,7 +227,7 @@ export const renderCanvas = function () {
 
   ctx.running = true;
   ctx.frame = 1;
-  f = new (n as any)({
+  f = new n({
     phase: Math.random() * 2 * Math.PI,
     amplitude: 85,
     frequency: 0.0015,
