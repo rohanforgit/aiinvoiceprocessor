@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import LandingHomePage from './components/LandingHomePage';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import MetricsCards from './components/MetricsCards';
@@ -8,7 +9,6 @@ import InvoiceReviewModal from './components/InvoiceReviewModal';
 import AnalyticsView from './components/AnalyticsView';
 import SettingsModal from './components/SettingsModal';
 import ShaderLoginPage from './components/ShaderLoginPage';
-import Hero from './components/ui/animated-shader-hero';
 import { supabase } from './supabaseClient';
 
 export default function App() {
@@ -22,7 +22,8 @@ export default function App() {
     }
   });
 
-  const [activeTab, setActiveTab] = useState('hero'); // 'hero' | 'dashboard' | 'invoices' | 'upload' | 'analytics'
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'invoices' | 'upload' | 'analytics'
+  const [viewMode, setViewMode] = useState('landing'); // 'landing' | 'app'
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -33,23 +34,19 @@ export default function App() {
   const [user, setUser] = useState(() => {
     try {
       const savedUser = localStorage.getItem('msme_user_auth');
-      return savedUser ? JSON.parse(savedUser) : {
-        name: 'Rojo (MSME Owner)',
-        email: 'rojo.owner@business.com',
-        provider: 'Google (Gmail)',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80'
-      };
+      return savedUser ? JSON.parse(savedUser) : null;
     } catch (e) {
-      return {
-        name: 'Rojo (MSME Owner)',
-        email: 'rojo.owner@business.com',
-        provider: 'Google (Gmail)',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80'
-      };
+      return null;
     }
   });
 
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    try {
+      return !!localStorage.getItem('msme_user_auth');
+    } catch (e) {
+      return false;
+    }
+  });
 
   // Sync invoices to localStorage
   useEffect(() => {
@@ -93,6 +90,7 @@ export default function App() {
     setUser(userData);
     setIsAuthenticated(true);
     setShowAuthModal(false);
+    setViewMode('app');
     try {
       localStorage.setItem('msme_user_auth', JSON.stringify(userData));
     } catch (e) {
@@ -117,6 +115,10 @@ export default function App() {
     try {
       await supabase.auth.signOut();
     } catch (e) {}
+    setUser(null);
+    setIsAuthenticated(false);
+    localStorage.removeItem('msme_user_auth');
+    setViewMode('landing');
     setShowAuthModal(true);
   };
 
@@ -151,6 +153,38 @@ export default function App() {
 
   const pendingCount = invoices.filter(i => i.status === 'pending').length;
 
+  // 1. RENDER STANDALONE LANDING HOME PAGE
+  if (viewMode === 'landing' && !showAuthModal) {
+    return (
+      <LandingHomePage 
+        onOpenLogin={() => setShowAuthModal(true)}
+        onLaunchDashboard={() => {
+          if (!user) {
+            setUser({
+              name: 'Rojo (MSME Owner)',
+              email: 'rojo.owner@business.com',
+              provider: 'Google (Gmail)',
+              avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80'
+            });
+            setIsAuthenticated(true);
+          }
+          setViewMode('app');
+        }}
+      />
+    );
+  }
+
+  // 2. RENDER FULLSCREEN ANIMATED SHADER LOGIN SCREEN
+  if (showAuthModal) {
+    return (
+      <ShaderLoginPage 
+        onLogin={(u) => { handleLogin(u); }} 
+        onGuestContinue={() => { handleGuestContinue(); }} 
+      />
+    );
+  }
+
+  // 3. RENDER POST-LOGIN FULL MSME BILLING APPLICATION PORTAL
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)' }}>
       
@@ -158,7 +192,9 @@ export default function App() {
       <Sidebar 
         activeTab={activeTab}
         setActiveTab={(tab) => {
-          if (tab === 'settings') {
+          if (tab === 'hero' || tab === 'landing') {
+            setViewMode('landing');
+          } else if (tab === 'settings') {
             setShowSettingsModal(true);
           } else {
             setActiveTab(tab);
@@ -175,7 +211,13 @@ export default function App() {
         {/* Header */}
         <Header 
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          setActiveTab={(tab) => {
+            if (tab === 'hero' || tab === 'landing') {
+              setViewMode('landing');
+            } else {
+              setActiveTab(tab);
+            }
+          }}
           onOpenSettings={() => setShowSettingsModal(true)}
           onOpenAuth={() => setShowAuthModal(true)}
           pendingCount={pendingCount}
@@ -183,59 +225,20 @@ export default function App() {
         />
 
         {/* Content Body */}
-        {activeTab === 'hero' ? (
-          <div style={{ flex: '1', position: 'relative' }}>
-            <Hero
-              trustBadge={{
-                text: "Trusted by 1,000+ MSMEs & Fast-Growing Businesses",
-                icons: ["✨", "⚡", "🚀"]
-              }}
-              headline={{
-                line1: "AI-Powered",
-                line2: "Invoice & Bill Automation"
-              }}
-              subtitle="Instant AI extraction for bills, receipts, line items & taxes powered by Grok 2 Vision & Gemini 1.5. Syncs directly with Supabase & Excel."
-              buttons={{
-                primary: {
-                  text: "Extract New Bill Now",
-                  onClick: () => setActiveTab('upload')
-                },
-                secondary: {
-                  text: user ? `Logged in as ${user.name}` : "Google & Email Sign In",
-                  onClick: () => setShowAuthModal(true)
-                }
-              }}
-            />
-          </div>
-        ) : (
-          <main style={{ flex: '1', padding: '28px', maxWidth: '1600px', width: '100%', margin: '0 auto' }}>
-            
-            {/* KPI Stat Cards */}
-            <MetricsCards 
-              invoices={invoices} 
-              onFilterStatus={(st) => {
-                setStatusFilter(st);
-                setActiveTab('invoices');
-              }} 
-            />
+        <main style={{ flex: '1', padding: '28px', maxWidth: '1600px', width: '100%', margin: '0 auto' }}>
+          
+          {/* KPI Stat Cards */}
+          <MetricsCards 
+            invoices={invoices} 
+            onFilterStatus={(st) => {
+              setStatusFilter(st);
+              setActiveTab('invoices');
+            }} 
+          />
 
-            {/* Views */}
-            {activeTab === 'dashboard' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-                <InvoiceTable 
-                  invoices={invoices}
-                  onSelectInvoice={setSelectedInvoice}
-                  onApproveInvoice={handleApproveInvoice}
-                  onRejectInvoice={handleRejectInvoice}
-                  onDeleteInvoice={handleDeleteInvoice}
-                  statusFilter={statusFilter}
-                  setStatusFilter={setStatusFilter}
-                />
-                <AnalyticsView invoices={invoices} />
-              </div>
-            )}
-
-            {activeTab === 'invoices' && (
+          {/* Views */}
+          {activeTab === 'dashboard' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
               <InvoiceTable 
                 invoices={invoices}
                 onSelectInvoice={setSelectedInvoice}
@@ -245,20 +248,33 @@ export default function App() {
                 statusFilter={statusFilter}
                 setStatusFilter={setStatusFilter}
               />
-            )}
-
-            {activeTab === 'upload' && (
-              <InvoiceUpload 
-                webhookUrl={webhookUrl} 
-                onInvoiceExtracted={handleInvoiceExtracted} 
-              />
-            )}
-
-            {activeTab === 'analytics' && (
               <AnalyticsView invoices={invoices} />
-            )}
-          </main>
-        )}
+            </div>
+          )}
+
+          {activeTab === 'invoices' && (
+            <InvoiceTable 
+              invoices={invoices}
+              onSelectInvoice={setSelectedInvoice}
+              onApproveInvoice={handleApproveInvoice}
+              onRejectInvoice={handleRejectInvoice}
+              onDeleteInvoice={handleDeleteInvoice}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+            />
+          )}
+
+          {activeTab === 'upload' && (
+            <InvoiceUpload 
+              webhookUrl={webhookUrl} 
+              onInvoiceExtracted={handleInvoiceExtracted} 
+            />
+          )}
+
+          {activeTab === 'analytics' && (
+            <AnalyticsView invoices={invoices} />
+          )}
+        </main>
 
       </div>
 
@@ -278,16 +294,6 @@ export default function App() {
           setWebhookUrl={setWebhookUrl}
           onClose={() => setShowSettingsModal(false)}
         />
-      )}
-
-      {/* Fullscreen Animated Shader Login Screen */}
-      {showAuthModal && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
-          <ShaderLoginPage 
-            onLogin={(u) => { handleLogin(u); setShowAuthModal(false); }} 
-            onGuestContinue={() => { handleGuestContinue(); setShowAuthModal(false); }} 
-          />
-        </div>
       )}
 
     </div>
