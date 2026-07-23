@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
 
 :root {
   --bg-primary: #0b0f19;
@@ -30,11 +31,8 @@
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 24px;
-  
-  --shadow-glow: 0 0 25px rgba(99, 102, 241, 0.15);
-  --shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
-  --backdrop-blur: blur(16px);
-  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 }
 
@@ -48,58 +46,47 @@ body {
   font-family: var(--font-sans);
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  line-height: 1.5;
-  overflow-x: hidden;
   min-height: 100vh;
-  background-image: 
-    radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.08) 0%, transparent 40%),
-    radial-gradient(circle at 85% 85%, rgba(16, 185, 129, 0.06) 0%, transparent 40%);
-  background-attachment: fixed;
+  overflow-x: hidden;
 }
 
-button {
-  font-family: var(--font-sans);
-  cursor: pointer;
-  border: none;
-  outline: none;
-  transition: all 0.2s ease;
-}
-
-input, select, textarea {
-  font-family: var(--font-sans);
-  outline: none;
-}
-
-/* Custom Scrollbar */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: var(--bg-primary);
 }
+
 ::-webkit-scrollbar-thumb {
-  background: #374151;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #4b5563;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
 }
 
-/* Glassmorphism Panel */
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Glassmorphism Panel Utilities */
 .glass-panel {
   background: var(--bg-card);
-  backdrop-filter: var(--backdrop-blur);
-  -webkit-backdrop-filter: var(--backdrop-blur);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
+}
+
+.glass-panel-hover {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-panel-hover:hover {
   background: var(--bg-card-hover);
   border-color: var(--border-accent);
-  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px -10px rgba(99, 102, 241, 0.2);
 }
 
 /* Status Badges */
@@ -111,8 +98,6 @@ input, select, textarea {
   border-radius: 20px;
   font-size: 0.75rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .badge-approved {
@@ -133,42 +118,6 @@ input, select, textarea {
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
-.badge-duplicate {
-  background: var(--purple-light);
-  color: var(--purple);
-  border: 1px solid rgba(139, 92, 246, 0.3);
-}
-
-/* Confidence Score Badge */
-.confidence-high {
-  color: var(--emerald);
-}
-.confidence-medium {
-  color: var(--amber);
-}
-.confidence-low {
-  color: var(--rose);
-}
-
-/* Pulse animation */
-@keyframes pulse-subtle {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.7; transform: scale(0.98); }
-}
-
-.animate-pulse-subtle {
-  animation: pulse-subtle 2s infinite ease-in-out;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
 /* Modal Overlay */
 .modal-overlay {
   position: fixed;
@@ -178,21 +127,19 @@ input, select, textarea {
   bottom: 0;
   background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(8px);
-  z-index: 1000;
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
 }
 
-/* Shimmer Effect */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+/* Pulse Glow Effect */
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
 }
 
-.skeleton {
-  background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+.animate-pulse-glow {
+  animation: pulseGlow 3s ease-in-out infinite;
 }

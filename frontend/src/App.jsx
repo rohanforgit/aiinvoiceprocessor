@@ -8,6 +8,7 @@ import InvoiceReviewModal from './components/InvoiceReviewModal';
 import AnalyticsView from './components/AnalyticsView';
 import SettingsModal from './components/SettingsModal';
 import AuthModal from './components/AuthModal';
+import Hero from './components/ui/animated-shader-hero';
 import { supabase } from './supabaseClient';
 
 export default function App() {
@@ -21,7 +22,7 @@ export default function App() {
     }
   });
 
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('hero'); // 'hero' | 'dashboard' | 'invoices' | 'upload' | 'analytics'
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -176,25 +177,65 @@ export default function App() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           onOpenSettings={() => setShowSettingsModal(true)}
+          onOpenAuth={() => setShowAuthModal(true)}
           pendingCount={pendingCount}
           user={user}
         />
 
         {/* Content Body */}
-        <main style={{ flex: '1', padding: '28px', maxWidth: '1600px', width: '100%', margin: '0 auto' }}>
-          
-          {/* KPI Stat Cards */}
-          <MetricsCards 
-            invoices={invoices} 
-            onFilterStatus={(st) => {
-              setStatusFilter(st);
-              setActiveTab('invoices');
-            }} 
-          />
+        {activeTab === 'hero' ? (
+          <div style={{ flex: '1', position: 'relative' }}>
+            <Hero
+              trustBadge={{
+                text: "Trusted by 1,000+ MSMEs & Fast-Growing Businesses",
+                icons: ["✨", "⚡", "🚀"]
+              }}
+              headline={{
+                line1: "AI-Powered",
+                line2: "Invoice & Bill Automation"
+              }}
+              subtitle="Instant AI extraction for bills, receipts, line items & taxes powered by Grok 2 Vision & Gemini 1.5. Syncs directly with Supabase & Excel."
+              buttons={{
+                primary: {
+                  text: "Extract New Bill Now",
+                  onClick: () => setActiveTab('upload')
+                },
+                secondary: {
+                  text: user ? `Logged in as ${user.name}` : "Google & Email Sign In",
+                  onClick: () => setShowAuthModal(true)
+                }
+              }}
+            />
+          </div>
+        ) : (
+          <main style={{ flex: '1', padding: '28px', maxWidth: '1600px', width: '100%', margin: '0 auto' }}>
+            
+            {/* KPI Stat Cards */}
+            <MetricsCards 
+              invoices={invoices} 
+              onFilterStatus={(st) => {
+                setStatusFilter(st);
+                setActiveTab('invoices');
+              }} 
+            />
 
-          {/* Views */}
-          {activeTab === 'dashboard' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+            {/* Views */}
+            {activeTab === 'dashboard' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+                <InvoiceTable 
+                  invoices={invoices}
+                  onSelectInvoice={setSelectedInvoice}
+                  onApproveInvoice={handleApproveInvoice}
+                  onRejectInvoice={handleRejectInvoice}
+                  onDeleteInvoice={handleDeleteInvoice}
+                  statusFilter={statusFilter}
+                  setStatusFilter={setStatusFilter}
+                />
+                <AnalyticsView invoices={invoices} />
+              </div>
+            )}
+
+            {activeTab === 'invoices' && (
               <InvoiceTable 
                 invoices={invoices}
                 onSelectInvoice={setSelectedInvoice}
@@ -204,33 +245,20 @@ export default function App() {
                 statusFilter={statusFilter}
                 setStatusFilter={setStatusFilter}
               />
+            )}
+
+            {activeTab === 'upload' && (
+              <InvoiceUpload 
+                webhookUrl={webhookUrl} 
+                onInvoiceExtracted={handleInvoiceExtracted} 
+              />
+            )}
+
+            {activeTab === 'analytics' && (
               <AnalyticsView invoices={invoices} />
-            </div>
-          )}
-
-          {activeTab === 'invoices' && (
-            <InvoiceTable 
-              invoices={invoices}
-              onSelectInvoice={setSelectedInvoice}
-              onApproveInvoice={handleApproveInvoice}
-              onRejectInvoice={handleRejectInvoice}
-              onDeleteInvoice={handleDeleteInvoice}
-              statusFilter={statusFilter}
-              setStatusFilter={setStatusFilter}
-            />
-          )}
-
-          {activeTab === 'upload' && (
-            <InvoiceUpload 
-              webhookUrl={webhookUrl} 
-              onInvoiceExtracted={handleInvoiceExtracted} 
-            />
-          )}
-
-          {activeTab === 'analytics' && (
-            <AnalyticsView invoices={invoices} />
-          )}
-        </main>
+            )}
+          </main>
+        )}
 
       </div>
 
@@ -252,7 +280,7 @@ export default function App() {
         />
       )}
 
-      {/* Optional Auth Switch Modal */}
+      {/* Google & Email Auth Modal */}
       {showAuthModal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 999 }}>
           <AuthModal 

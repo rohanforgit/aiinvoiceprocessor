@@ -1,10 +1,12 @@
 import React from 'react';
 import { 
+  Sparkles,
   LayoutDashboard, 
   FileText, 
   UploadCloud, 
   PieChart, 
-  LogOut
+  LogOut,
+  UserCheck
 } from 'lucide-react';
 
 export default function Sidebar({ 
@@ -15,6 +17,7 @@ export default function Sidebar({
   onLogout 
 }) {
   const navItems = [
+    { id: 'hero', label: 'Shader Hero Showcase', icon: Sparkles },
     { id: 'dashboard', label: 'Dashboard Overview', icon: LayoutDashboard },
     { id: 'invoices', label: 'All Invoices', icon: FileText, badge: pendingCount > 0 ? pendingCount : null, badgeColor: 'var(--amber)' },
     { id: 'upload', label: 'Extract New Bill', icon: UploadCloud },
@@ -36,7 +39,10 @@ export default function Sidebar({
       zIndex: 90
     }}>
       {/* Brand Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 8px 24px 8px', borderBottom: '1px solid var(--border-color)' }}>
+      <div 
+        onClick={() => setActiveTab('hero')}
+        style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 8px 24px 8px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer' }}
+      >
         <div style={{
           width: '40px',
           height: '40px',
@@ -54,7 +60,7 @@ export default function Sidebar({
             MSME Billing
           </h1>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: '600' }}>
-            Invoice Manager
+            AI Invoice Manager
           </span>
         </div>
       </div>
@@ -85,7 +91,8 @@ export default function Sidebar({
                 color: isActive ? '#ffffff' : 'var(--text-secondary)',
                 background: isActive ? 'linear-gradient(90deg, rgba(99, 102, 241, 0.2) 0%, rgba(99, 102, 241, 0.05) 100%)' : 'transparent',
                 borderLeft: isActive ? '3px solid var(--primary)' : '3px solid transparent',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                cursor: 'pointer'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -136,8 +143,8 @@ export default function Sidebar({
 
         <button
           onClick={onLogout}
-          style={{ background: 'transparent', color: 'var(--rose)', padding: '6px' }}
-          title="Sign Out"
+          style={{ background: 'transparent', color: 'var(--rose)', padding: '6px', cursor: 'pointer' }}
+          title="Sign Out / Switch Account"
         >
           <LogOut size={18} />
         </button>
