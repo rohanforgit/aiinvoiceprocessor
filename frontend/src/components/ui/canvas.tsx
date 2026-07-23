@@ -16,17 +16,16 @@ n.prototype = {
     this.amplitude = e.amplitude || 1;
   },
   update: function () {
-    return (
-      // @ts-ignore
-      (this.phase += this.frequency),
-      // @ts-ignore
-      (e = this.offset + Math.sin(this.phase) * this.amplitude)
-    );
+    this.phase += this.frequency;
+    val = this.offset + Math.sin(this.phase) * this.amplitude;
+    return val;
   },
   value: function () {
-    return e;
+    return val;
   },
 };
+
+var val = 0;
 
 // @ts-ignore
 function Line(e) {
@@ -82,6 +81,7 @@ Line.prototype = {
         (e *= E.tension);
   },
   draw: function () {
+    if (!ctx) return;
     let e,
       t,
       // @ts-ignore
@@ -108,7 +108,9 @@ Line.prototype = {
     // @ts-ignore
     t = this.nodes[a + 1];
     // @ts-ignore
-    ctx.quadraticCurveTo(e.x, e.y, t.x, t.y);
+    if (e && t) {
+      ctx.quadraticCurveTo(e.x, e.y, t.x, t.y);
+    }
     // @ts-ignore
     ctx.stroke();
     // @ts-ignore
@@ -125,32 +127,35 @@ function onMousemove(e) {
   }
   // @ts-ignore
   function c(e) {
-    e.touches
-      ? // @ts-ignore
-        ((pos.x = e.touches[0].pageX), (pos.y = e.touches[0].pageY))
-      : // @ts-ignore
-        ((pos.x = e.clientX), (pos.y = e.clientY)),
-      e.preventDefault();
+    if (e.touches && e.touches.length > 0) {
+      pos.x = e.touches[0].pageX;
+      pos.y = e.touches[0].pageY;
+    } else {
+      pos.x = e.clientX;
+      pos.y = e.clientY;
+    }
   }
   // @ts-ignore
   function l(e) {
-    // @ts-ignore
-    1 == e.touches.length &&
-      ((pos.x = e.touches[0].pageX), (pos.y = e.touches[0].pageY));
+    if (e.touches && e.touches.length === 1) {
+      pos.x = e.touches[0].pageX;
+      pos.y = e.touches[0].pageY;
+    }
   }
-  document.removeEventListener("mousemove", onMousemove),
-    document.removeEventListener("touchstart", onMousemove),
-    document.addEventListener("mousemove", c),
-    document.addEventListener("touchmove", c),
-    document.addEventListener("touchstart", l),
-    c(e),
-    o(),
-    render();
+  document.removeEventListener("mousemove", onMousemove);
+  document.removeEventListener("touchstart", onMousemove);
+  document.addEventListener("mousemove", c);
+  document.addEventListener("touchmove", c);
+  document.addEventListener("touchstart", l);
+  c(e);
+  o();
+  render();
 }
 
+var animId: number | null = null;
+
 function render() {
-  // @ts-ignore
-  if (ctx.running) {
+  if (ctx && ctx.running) {
     // @ts-ignore
     ctx.globalCompositeOperation = "source-over";
     // @ts-ignore
@@ -163,30 +168,29 @@ function render() {
     ctx.lineWidth = 10;
     for (var e, t = 0; t < E.trails; t++) {
       // @ts-ignore
-      (e = lines[t]).update();
-      e.draw();
+      if (lines[t]) {
+        lines[t].update();
+        lines[t].draw();
+      }
     }
     // @ts-ignore
     ctx.frame++;
-    window.requestAnimationFrame(render);
+    animId = window.requestAnimationFrame(render);
   }
 }
 
 function resizeCanvas() {
-  // @ts-ignore
-  ctx.canvas.width = window.innerWidth - 20;
-  // @ts-ignore
-  ctx.canvas.height = window.innerHeight;
+  if (ctx && ctx.canvas) {
+    ctx.canvas.width = window.innerWidth;
+    ctx.canvas.height = window.innerHeight;
+  }
 }
 
 // @ts-ignore
-var ctx,
-  // @ts-ignore
-  f,
-  e = 0,
-  pos = {},
-  // @ts-ignore
-  lines = [],
+var ctx: any = null,
+  f: any = null,
+  pos: any = { x: 0, y: 0 },
+  lines: any[] = [],
   E = {
     debug: true,
     friction: 0.5,
@@ -195,6 +199,7 @@ var ctx,
     dampening: 0.025,
     tension: 0.99,
   };
+
 function Node() {
   this.x = 0;
   this.y = 0;
@@ -203,31 +208,35 @@ function Node() {
 }
 
 export const renderCanvas = function () {
-  // @ts-ignore
-  ctx = document.getElementById("canvas").getContext("2d");
+  const canvasElem = document.getElementById("canvas") as HTMLCanvasElement;
+  if (!canvasElem) return () => {};
+
+  ctx = canvasElem.getContext("2d");
+  if (!ctx) return () => {};
+
   ctx.running = true;
   ctx.frame = 1;
-  f = new n({
+  f = new (n as any)({
     phase: Math.random() * 2 * Math.PI,
     amplitude: 85,
     frequency: 0.0015,
     offset: 285,
   });
+
+  pos.x = window.innerWidth / 2;
+  pos.y = window.innerHeight / 2;
+
   document.addEventListener("mousemove", onMousemove);
   document.addEventListener("touchstart", onMousemove);
-  document.body.addEventListener("orientationchange", resizeCanvas);
   window.addEventListener("resize", resizeCanvas);
-  window.addEventListener("focus", () => {
-    // @ts-ignore
-    if (!ctx.running) {
-      // @ts-ignore
-      ctx.running = true;
-      render();
-    }
-  });
-  window.addEventListener("blur", () => {
-    // @ts-ignore
-    ctx.running = true;
-  });
+  
   resizeCanvas();
+
+  return () => {
+    if (ctx) ctx.running = false;
+    if (animId) cancelAnimationFrame(animId);
+    document.removeEventListener("mousemove", onMousemove);
+    document.removeEventListener("touchstart", onMousemove);
+    window.removeEventListener("resize", resizeCanvas);
+  };
 };

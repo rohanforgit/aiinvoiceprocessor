@@ -5,7 +5,10 @@ import { Sparkles, ArrowRight, Plus, LogIn, FileText, Database, FileSpreadsheet 
 
 export default function LandingHomePage({ onOpenLogin, onLaunchDashboard }) {
   useEffect(() => {
-    renderCanvas();
+    const cleanup = renderCanvas();
+    return () => {
+      if (cleanup) cleanup();
+    };
   }, []);
 
   return (
