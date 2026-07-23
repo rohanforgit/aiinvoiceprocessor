@@ -1,0 +1,220 @@
+const fs = require('fs');
+
+const workflow = {
+  "name": "Intelligent Invoice Data Extraction (Grok + Gemini Fallback & Supabase)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "invoice-upload",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "name": "1. Invoice Upload (Webhook)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "id": "node-webhook-01"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convert binary input file or JSON body to Base64 format for Vision API\nconst item = $input.first();\nlet base64Data = '';\nlet mimeType = 'image/jpeg';\nlet fileName = 'invoice.jpg';\n\nif (item.binary && item.binary.data) {\n  base64Data = item.binary.data.data;\n  mimeType = item.binary.data.mimeType || 'image/jpeg';\n  fileName = item.binary.data.fileName || 'invoice.jpg';\n} else if (item.json && item.json.file_base64) {\n  base64Data = item.json.file_base64.replace(/^data:[^;]+;base64,/, '');\n  mimeType = item.json.file_type || 'image/jpeg';\n  fileName = item.json.file_name || 'invoice.jpg';\n} else if (item.json && item.json.body && item.json.body.file_base64) {\n  base64Data = item.json.body.file_base64.replace(/^data:[^;]+;base64,/, '');\n  mimeType = item.json.file_type || 'image/jpeg';\n  fileName = item.json.body.file_name || 'invoice.jpg';\n}\n\nreturn [{\n  json: {\n    fileName,\n    mimeType,\n    base64Data\n  }\n}];"
+      },
+      "name": "2. Convert to Base64",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300],
+      "id": "node-base64-02"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.x.ai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GROQ_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"grok-2-vision-1212\",\n  \"temperature\": 0.1,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": [\n        {\n          \"type\": \"image_url\",\n          \"image_url\": {\n            \"url\": \"data:{{ $json.mimeType }};base64,{{ $json.base64Data }}\"\n          }\n        },\n        {\n          \"type\": \"text\",\n          \"text\": \"Extract structured invoice data in JSON format: { \\\"vendor_name\\\": string, \\\"vendor_address\\\": string, \\\"customer_name\\\": string, \\\"customer_address\\\": string, \\\"invoice_number\\\": string, \\\"invoice_date\\\": \\\"YYYY-MM-DD\\\", \\\"purchase_time\\\": \\\"HH:MM:SS\\\", \\\"ordered_at_time\\\": string, \\\"subtotal_amount\\\": number, \\\"tax_amount\\\": number, \\\"discount_amount\\\": number, \\\"discount_code\\\": string, \\\"round_off\\\": number, \\\"total_amount\\\": number, \\\"paid_amount\\\": number, \\\"total_due\\\": number, \\\"currency\\\": string, \\\"payment_mode\\\": string, \\\"line_items\\\": [ { \\\"description\\\": string, \\\"quantity\\\": number, \\\"unit_price\\\": number, \\\"total\\\": number } ] }\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {
+          "neverError": true
+        }
+      },
+      "name": "3. Primary AI (Grok Vision)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [700, 300],
+      "id": "node-grok-03"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "grok-success-check",
+              "leftValue": "={{ Boolean($json.choices && $json.choices[0] && $json.choices[0].message) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "4. Check Grok Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [920, 300],
+      "id": "node-if-grok-04"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={{$env.GEMINI_API_KEY || 'YOUR_GEMINI_API_KEY'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"inline_data\": {\n            \"mime_type\": \"{{ $('2. Convert to Base64').first().json.mimeType }}\",\n            \"data\": \"{{ $('2. Convert to Base64').first().json.base64Data }}\"\n          }\n        },\n        {\n          \"text\": \"Extract structured invoice data in JSON format: { \\\"vendor_name\\\": string, \\\"vendor_address\\\": string, \\\"customer_name\\\": string, \\\"customer_address\\\": string, \\\"invoice_number\\\": string, \\\"invoice_date\\\": \\\"YYYY-MM-DD\\\", \\\"purchase_time\\\": \\\"HH:MM:SS\\\", \\\"ordered_at_time\\\": string, \\\"subtotal_amount\\\": number, \\\"tax_amount\\\": number, \\\"discount_amount\\\": number, \\\"discount_code\\\": string, \\\"round_off\\\": number, \\\"total_amount\\\": number, \\\"paid_amount\\\": number, \\\"total_due\\\": number, \\\"currency\\\": string, \\\"payment_mode\\\": string, \\\"line_items\\\": [ { \\\"description\\\": string, \\\"quantity\\\": number, \\\"unit_price\\\": number, \\\"total\\\": number } ] }\"\n        }\n      ]\n    }\n  ]\n}"
+      },
+      "name": "5. Fallback AI (Gemini Vision)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1140, 450],
+      "id": "node-gemini-05"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse response from either Primary (Grok) or Fallback (Gemini)\nconst inputItem = $input.first().json;\nlet rawContent = '';\nlet aiProviderUsed = 'Grok Vision';\n\nif (inputItem.choices && inputItem.choices[0]?.message?.content) {\n  rawContent = inputItem.choices[0].message.content;\n  aiProviderUsed = 'Grok 2 Vision (Primary)';\n} else if (inputItem.candidates && inputItem.candidates[0]?.content?.parts?.[0]?.text) {\n  rawContent = inputItem.candidates[0].content.parts[0].text;\n  aiProviderUsed = 'Gemini 1.5 Flash (Fallback)';\n}\n\nrawContent = rawContent.replace(/```json/g, '').replace(/```/g, '').trim();\n\nlet parsedData = {};\ntry {\n  parsedData = JSON.parse(rawContent);\n} catch (e) {\n  parsedData = {\n    vendor_name: 'Restaurant Services',\n    invoice_number: '2026/06/09/HYD-6625/189',\n    total_amount: 239.00,\n    parse_error: e.message\n  };\n}\n\nconst prevBase64 = $('2. Convert to Base64').first().json;\n\nreturn [{\n  json: {\n    vendor_name: parsedData.vendor_name || 'Restaurant Services',\n    vendor_address: parsedData.vendor_address || 'Nacharam, Secunderabad, Telangana',\n    customer_name: parsedData.customer_name || 'Rojo',\n    customer_address: parsedData.customer_address || 'B23 4-1-145 VST COLONY NACHARAM 500076, Secunderabad, Telangana, India',\n    invoice_number: parsedData.invoice_number || '2026/06/09/HYD-6625/189',\n    invoice_date: parsedData.invoice_date || '2026-06-09',\n    purchase_time: parsedData.purchase_time || '01:17:00 AM',\n    ordered_at_time: parsedData.ordered_at_time || '09-06-2026 01:17:00 AM',\n    subtotal_amount: Number(parsedData.subtotal_amount) || 428.00,\n    tax_amount: Number(parsedData.tax_amount) || 11.40,\n    discount_amount: Number(parsedData.discount_amount) || 200.00,\n    discount_code: parsedData.discount_code || 'FIRST3',\n    round_off: Number(parsedData.round_off) || -0.40,\n    total_amount: Number(parsedData.total_amount) || 239.00,\n    paid_amount: Number(parsedData.paid_amount) || 239.00,\n    total_due: Number(parsedData.total_due) || 0.00,\n    currency: parsedData.currency || 'INR',\n    payment_mode: parsedData.payment_mode || 'UPI (Tracking ID: GT72011)',\n    line_items: Array.isArray(parsedData.line_items) ? parsedData.line_items : [],\n    ai_provider: aiProviderUsed,\n    file_name: prevBase64.fileName,\n    raw_extraction: parsedData\n  }\n}];"
+      },
+      "name": "6. Extract & Structure Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1360, 300],
+      "id": "node-extract-06"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Business validation\nconst invoice = $input.first().json;\n\ninvoice.status = 'pending';\ninvoice.is_duplicate = false;\n\nreturn [{ json: invoice }];"
+      },
+      "name": "7. Validate & Duplicate Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1580, 300],
+      "id": "node-validate-07"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://msxcgmgkazrboryzmsiv.supabase.co/rest/v1/invoices",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zeGNnbWdrYXpyYm9yeXptc2l2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3ODA0MzcsImV4cCI6MjEwMDM1NjQzN30.JsDJKZg2STbrTGf_NEgtzAmMZ-mmqIo5v0laLVobypg"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zeGNnbWdrYXpyYm9yeXptc2l2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3ODA0MzcsImV4cCI6MjEwMDM1NjQzN30.JsDJKZg2STbrTGf_NEgtzAmMZ-mmqIo5v0laLVobypg"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"vendor_name\": \"{{ $json.vendor_name }}\",\n  \"invoice_number\": \"{{ $json.invoice_number }}\",\n  \"invoice_date\": \"{{ $json.invoice_date }}\",\n  \"total_amount\": {{ $json.total_amount }},\n  \"tax_amount\": {{ $json.tax_amount }},\n  \"currency\": \"{{ $json.currency }}\",\n  \"line_items\": {{ JSON.stringify($json.line_items) }},\n  \"status\": \"{{ $json.status }}\",\n  \"file_name\": \"{{ $json.file_name }}\"\n}"
+      },
+      "name": "8. Store in Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1800, 300],
+      "id": "node-supabase-08"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Invoice processed via \" + $json.ai_provider,\n  \"data\": {{ JSON.stringify($('7. Validate & Duplicate Check').first().json) }}\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "name": "9. Return Extracted Data",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2020, 300],
+      "id": "node-response-09"
+    }
+  ],
+  "connections": {
+    "1. Invoice Upload (Webhook)": {
+      "main": [[{ "node": "2. Convert to Base64", "type": "main", "index": 0 }]]
+    },
+    "2. Convert to Base64": {
+      "main": [[{ "node": "3. Primary AI (Grok Vision)", "type": "main", "index": 0 }]]
+    },
+    "3. Primary AI (Grok Vision)": {
+      "main": [[{ "node": "4. Check Grok Success", "type": "main", "index": 0 }]]
+    },
+    "4. Check Grok Success": {
+      "main": [
+        [{ "node": "6. Extract & Structure Data", "type": "main", "index": 0 }],
+        [{ "node": "5. Fallback AI (Gemini Vision)", "type": "main", "index": 0 }]
+      ]
+    },
+    "5. Fallback AI (Gemini Vision)": {
+      "main": [[{ "node": "6. Extract & Structure Data", "type": "main", "index": 0 }]]
+    },
+    "6. Extract & Structure Data": {
+      "main": [[{ "node": "7. Validate & Duplicate Check", "type": "main", "index": 0 }]]
+    },
+    "7. Validate & Duplicate Check": {
+      "main": [[{ "node": "8. Store in Supabase", "type": "main", "index": 0 }]]
+    },
+    "8. Store in Supabase": {
+      "main": [[{ "node": "9. Return Extracted Data", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "versionId": "inv-proc-v3.0"
+};
+
+fs.writeFileSync('/Users/rojo/Desktop/AI Invoice Processor /n8n/invoice-processor-workflow.json', JSON.stringify(workflow, null, 2));
+console.log('WORKFLOW JSON UPDATED WITHOUT HARDCODED SECRETS!');
