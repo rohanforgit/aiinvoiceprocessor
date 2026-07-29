@@ -55,7 +55,7 @@ export default function InvoiceUpload({ webhookUrl, onInvoiceExtracted }) {
           });
           const fileBase64 = await base64Promise;
 
-          const n8nResp = await fetch(webhookUrl, {
+          const fetchPromise = fetch(webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -64,6 +64,12 @@ export default function InvoiceUpload({ webhookUrl, onInvoiceExtracted }) {
               file_base64: fileBase64
             })
           });
+
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("n8n timeout")), 3500)
+          );
+
+          const n8nResp = await Promise.race([fetchPromise, timeoutPromise]);
 
           if (n8nResp.ok) {
             const n8nData = await n8nResp.json();
